@@ -1,4 +1,3 @@
-c:\Users\Dell\.gemini\antigravity\scratch\ai-leetcode-tracker\ml_service\requirements.txt
 fastapi==0.110.0
 uvicorn==0.28.0
 pandas==2.2.1
