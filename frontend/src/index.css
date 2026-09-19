@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* =========================================================
+   BASE
+   ========================================================= */
+@layer base {
+  html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  body {
+    margin: 0;
+    font-family: "Inter", sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+  h1,h2,h3,h4,h5,h6 {
+    font-family: "Outfit", sans-serif;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+}
+/* =========================================================
+   DARK MODE BASE
+   ========================================================= */
+html.dark body {
+  background: #070a13;
+  color: #f8fafc;
+}
+/* =========================================================
+   PREMIUM CARD
+   ========================================================= */
+/* Light mode */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.04),
+    0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+/* Dark mode */
+html.dark .glass-panel {
+  background: rgba(22, 30, 46, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+}
+/* =========================================================
+   GLOW EFFECTS
+   ========================================================= */
+.glow-purple {
+  box-shadow:
+    0 8px 30px -8px rgba(139, 92, 246, 0.18);
+}
+.glow-blue {
+  box-shadow:
+    0 8px 30px -8px rgba(59, 130, 246, 0.18);
+}
+/* Dark mode glow */
+html.dark .glow-purple {
+  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.2);
+}
+html.dark .glow-blue {
+  box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.25);
+}
+/* =========================================================
+   GRADIENT TEXT
+   ========================================================= */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    #3b82f6 0%,
+    #a855f7 50%,
+    #ffa116 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+/* Light */
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+/* Dark */
+html.dark ::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+/* =========================================================
+   SMOOTH TRANSITIONS
+   ========================================================= */
+.theme-transition,
+.theme-transition * {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease;
+}
