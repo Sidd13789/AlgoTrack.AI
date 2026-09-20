@@ -1,770 +1,475 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   Search,
-  BookOpen,
-  Play,
+  Filter,
+  ExternalLink,
   CheckCircle2,
-  X
-} from 'lucide-react';
-import axios from 'axios';
+  Circle,
+  RefreshCw,
+} from "lucide-react";
 
-function Problems() {
+export default function Problems() {
   const [problems, setProblems] = useState([]);
-  const [solvedIds, setSolvedIds] = useState([]);
-  const [search, setSearch] = useState('');
-  const [filterDifficulty, setFilterDifficulty] = useState('All');
-  const [filterTopic, setFilterTopic] = useState('All');
   const [loading, setLoading] = useState(true);
 
-  // Submit log modal
-  const [selectedProblem, setSelectedProblem] = useState(null);
-  const [status, setStatus] = useState('Solved');
-  const [attempts, setAttempts] = useState(1);
-  const [timeTaken, setTimeTaken] = useState(25);
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [difficulty, setDifficulty] = useState("All");
+  const [topic, setTopic] = useState("All");
 
-  useEffect(() => {
-    fetchProblemsData();
-  }, []);
-
-  const fetchProblemsData = async () => {
-    setLoading(true);
-
+  const fetchProblems = async () => {
     try {
-      const probRes = await axios.get('/api/problems');
-      setProblems(probRes.data);
+      setLoading(true);
 
-      const profileRes = await axios.get('/api/user/profile');
+      const res = await axios.get("/api/problems");
 
-      const submissions = profileRes.data.user
-        ? await fetchUserSolved()
-        : [];
-
-      setSolvedIds(submissions);
-    } catch (err) {
-      console.error('Failed to load problems data', err);
+      setProblems(res.data || []);
+    } catch (error) {
+      console.error("Failed to fetch problems:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUserSolved = async () => {
-    try {
-      const res = await axios.get('/api/user/profile');
+  useEffect(() => {
+    fetchProblems();
+  }, []);
 
-      const solved = [];
-
-      Object.entries(res.data.topicStats || {}).forEach(([topic, stat]) => {
-        // Generic aggregation placeholder
-      });
-
-      return solved;
-    } catch (e) {
-      return [];
-    }
-  };
-
-  const handleOpenLogModal = (problem) => {
-    setSelectedProblem(problem);
-    setStatus('Solved');
-    setAttempts(1);
-    setTimeTaken(25);
-    setHintsUsed(0);
-  };
-
-  const handleLogSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      await axios.post('/api/submissions', {
-        problem_id: selectedProblem.problem_id,
-        status,
-        attempts: parseInt(attempts),
-        time_taken: parseInt(timeTaken),
-        hints_used: parseInt(hintsUsed)
-      });
-
-      setSelectedProblem(null);
-      fetchProblemsData();
-    } catch (err) {
-      console.error('Failed to submit logs', err);
-      alert('Error updating logs.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const filteredProblems = problems.filter((p) => {
+  const filteredProblems = problems.filter((problem) => {
     const matchesSearch =
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.problem_id.includes(search);
+      problem.title
+        ?.toLowerCase()
+        .includes(search.toLowerCase()) ||
+      problem.problem_id
+        ?.toString()
+        .includes(search);
 
     const matchesDifficulty =
-      filterDifficulty === 'All' ||
-      p.difficulty === filterDifficulty;
+      difficulty === "All" ||
+      problem.difficulty === difficulty;
 
     const matchesTopic =
-      filterTopic === 'All' ||
-      p.topic === filterTopic;
+      topic === "All" ||
+      problem.topic === topic;
 
-    return matchesSearch && matchesDifficulty && matchesTopic;
+    return (
+      matchesSearch &&
+      matchesDifficulty &&
+      matchesTopic
+    );
   });
 
   const topics = [
-    'All',
-    'Arrays',
-    'Strings',
-    'Binary Search',
-    'Trees',
-    'Graphs',
-    'Dynamic Programming',
-    'Linked List',
-    'Stack'
+    ...new Set(problems.map((problem) => problem.topic)),
   ];
 
-  if (loading && problems.length === 0) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mb-2"></div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <RefreshCw
+          size={32}
+          className="animate-spin text-purple-500"
+        />
 
-        <p className="text-gray-600 dark:text-gray-400 text-xs font-semibold">
-          Loading problems repository...
+        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+          Loading problems...
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-          LeetCode Problems Pool
-        </h2>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-        <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-          Browse, navigate, and log your LeetCode attempts manually below.
-        </p>
-      </div>
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
+            Problem Bank
+          </h1>
 
-      {/* Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-
-        {/* Search */}
-        <div className="md:col-span-6 relative">
-          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500 dark:text-gray-400">
-            <Search size={16} />
-          </span>
-
-          <input
-            type="text"
-            placeholder="Search by title or ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="
-              w-full
-              bg-white
-              dark:bg-[#161e2e]
-              border
-              border-gray-300
-              dark:border-darkBorder/60
-              rounded-xl
-              py-2.5
-              pl-10
-              pr-4
-              text-gray-900
-              dark:text-white
-              placeholder-gray-400
-              dark:placeholder-gray-500
-              focus:outline-none
-              focus:border-purple-500
-              transition-all
-              text-xs
-              shadow-sm
-              dark:shadow-none
-            "
-          />
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Practice problems from your personalized LeetCode dataset.
+          </p>
         </div>
 
-        {/* Difficulty */}
-        <div className="md:col-span-3">
-          <select
-            value={filterDifficulty}
-            onChange={(e) => setFilterDifficulty(e.target.value)}
-            className="
-              w-full
-              bg-white
-              dark:bg-[#161e2e]
-              border
-              border-gray-300
-              dark:border-darkBorder/60
-              rounded-xl
-              py-2.5
-              px-3
-              text-gray-900
-              dark:text-white
-              focus:outline-none
-              focus:border-purple-500
-              transition-all
-              text-xs
-              appearance-none
-              cursor-pointer
-              shadow-sm
-              dark:shadow-none
-            "
-          >
-            <option value="All">All Difficulties</option>
-            <option value="Easy">Easy</option>
-            <option value="Medium">Medium</option>
-            <option value="Hard">Hard</option>
-          </select>
-        </div>
-
-        {/* Topics */}
-        <div className="md:col-span-3">
-          <select
-            value={filterTopic}
-            onChange={(e) => setFilterTopic(e.target.value)}
-            className="
-              w-full
-              bg-white
-              dark:bg-[#161e2e]
-              border
-              border-gray-300
-              dark:border-darkBorder/60
-              rounded-xl
-              py-2.5
-              px-3
-              text-gray-900
-              dark:text-white
-              focus:outline-none
-              focus:border-purple-500
-              transition-all
-              text-xs
-              appearance-none
-              cursor-pointer
-              shadow-sm
-              dark:shadow-none
-            "
-          >
-            {topics.map((t) => (
-              <option key={t} value={t}>
-                {t === 'All' ? 'All Topics' : t}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Problems Table */}
-      <div
-        className="
-          glass-panel
-          rounded-2xl
-          overflow-hidden
-          border
-          border-gray-200
-          dark:border-darkBorder/40
-        "
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-
-            <thead>
-              <tr
-                className="
-                  border-b
-                  border-gray-200
-                  dark:border-darkBorder/40
-                  text-gray-500
-                  dark:text-gray-400
-                  text-[10px]
-                  font-extrabold
-                  uppercase
-                  tracking-wider
-                  bg-gray-50
-                  dark:bg-darkCard/20
-                "
-              >
-                <th className="py-4 px-6 w-16">ID</th>
-                <th className="py-4 px-6">Title</th>
-                <th className="py-4 px-6">Topic</th>
-                <th className="py-4 px-6">Difficulty</th>
-                <th className="py-4 px-6">Acceptance</th>
-                <th className="py-4 px-6 text-right">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody
-              className="
-                divide-y
-                divide-gray-200
-                dark:divide-darkBorder/20
-              "
-            >
-              {filteredProblems.map((p) => (
-                <tr
-                  key={p.problem_id}
-                  className="
-                    hover:bg-gray-50
-                    dark:hover:bg-darkCard/25
-                    transition-colors
-                    text-xs
-                    font-semibold
-                    text-gray-700
-                    dark:text-gray-300
-                  "
-                >
-
-                  {/* ID */}
-                  <td className="py-4 px-6 font-mono text-purple-600 dark:text-purple-400">
-                    #{p.problem_id}
-                  </td>
-
-                  {/* Title */}
-                  <td className="py-4 px-6">
-                    <a
-                      href={p.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="
-                        flex
-                        items-center
-                        gap-1.5
-                        cursor-pointer
-                        text-gray-900
-                        dark:text-white
-                        font-bold
-                        hover:text-purple-600
-                        dark:hover:text-purple-400
-                        transition-colors
-                      "
-                    >
-                      <span>{p.title}</span>
-
-                      <BookOpen
-                        size={12}
-                        className="text-gray-400 dark:text-gray-500"
-                      />
-                    </a>
-                  </td>
-
-                  {/* Topic */}
-                  <td className="py-4 px-6">
-                    <span
-                      className="
-                        bg-blue-500/10
-                        text-blue-600
-                        dark:text-blue-400
-                        border
-                        border-blue-500/20
-                        px-2.5
-                        py-0.5
-                        rounded-full
-                        text-[10px]
-                        font-bold
-                      "
-                    >
-                      {p.topic}
-                    </span>
-                  </td>
-
-                  {/* Difficulty */}
-                  <td className="py-4 px-6">
-                    <span
-                      className={`
-                        text-[10px]
-                        font-bold
-                        ${
-                          p.difficulty === 'Easy'
-                            ? 'text-green-600 dark:text-green-400'
-                            : p.difficulty === 'Medium'
-                              ? 'text-orange-600 dark:text-orange-400'
-                              : 'text-red-600 dark:text-red-400'
-                        }
-                      `}
-                    >
-                      {p.difficulty}
-                    </span>
-                  </td>
-
-                  {/* Acceptance */}
-                  <td className="py-4 px-6 font-mono text-gray-700 dark:text-gray-300">
-                    {Math.round(p.acceptance_rate * 100)}%
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => handleOpenLogModal(p)}
-                      className="
-                        bg-purple-600/10
-                        border
-                        border-purple-500/30
-                        text-purple-600
-                        dark:text-purple-400
-                        hover:bg-purple-600
-                        hover:text-white
-                        px-3
-                        py-1.5
-                        rounded-lg
-                        text-xs
-                        font-bold
-                        transition-all
-                        inline-flex
-                        items-center
-                        gap-1
-                        cursor-pointer
-                      "
-                    >
-                      <Play size={10} fill="currentColor" />
-                      <span>Log Attempt</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {filteredProblems.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="
-                      text-center
-                      py-8
-                      text-gray-500
-                      dark:text-gray-500
-                    "
-                  >
-                    No problems found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Log Submission Modal */}
-      {selectedProblem && (
-        <div
+        <button
+          onClick={fetchProblems}
           className="
-            fixed
-            inset-0
-            bg-black/40
-            dark:bg-black/70
-            backdrop-blur-sm
-            z-50
-            flex
-            items-center
-            justify-center
-            p-4
+            flex items-center gap-2
+            px-4 py-2.5 rounded-xl
+            bg-gray-100 dark:bg-darkCard
+            border border-gray-200 dark:border-darkBorder/40
+            text-gray-700 dark:text-gray-300
+            hover:text-purple-600 dark:hover:text-white
+            hover:border-purple-500/40
+            transition-all
+            cursor-pointer
           "
         >
-          <div
-            className="
-              w-full
-              max-w-md
-              bg-white
-              dark:bg-darkCard
-              border
-              border-gray-200
-              dark:border-darkBorder
-              rounded-2xl
-              p-6
-              relative
-              shadow-2xl
-              animate-scale-up
-            "
-          >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
+      </div>
 
-            {/* Close */}
-            <button
-              onClick={() => setSelectedProblem(null)}
+      {/* Filters */}
+      <div className="glass-panel p-5 rounded-2xl">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Search */}
+          <div className="relative">
+
+            <Search
+              size={18}
               className="
-                absolute
-                top-4
-                right-4
-                text-gray-500
-                dark:text-gray-400
-                hover:text-gray-900
-                dark:hover:text-white
-                p-1
-                rounded-lg
-                hover:bg-gray-100
-                dark:hover:bg-darkBg/60
+                absolute left-3 top-1/2
+                -translate-y-1/2
+                text-gray-400
+              "
+            />
+
+            <input
+              type="text"
+              placeholder="Search problem..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="
+                w-full
+                bg-gray-50 dark:bg-darkBg
+                border border-gray-200 dark:border-darkBorder/50
+                rounded-xl
+                py-2.5 pl-10 pr-4
+                text-sm
+                text-gray-900 dark:text-white
+                placeholder-gray-400
+                focus:outline-none
+                focus:border-purple-500
                 transition-all
-                cursor-pointer
               "
-            >
-              <X size={18} />
-            </button>
-
-            {/* Modal Heading */}
-            <h3
-              className="
-                text-lg
-                font-bold
-                text-gray-900
-                dark:text-white
-                flex
-                items-center
-                gap-2
-                mb-1
-              "
-            >
-              <CheckCircle2
-                size={20}
-                className="text-green-500 dark:text-green-400"
-              />
-
-              <span>Log Problem Attempt</span>
-            </h3>
-
-            <p className="text-gray-600 dark:text-gray-400 text-xs mb-6">
-              Logging{' '}
-              <span className="text-gray-900 dark:text-white font-semibold">
-                {selectedProblem.title}
-              </span>{' '}
-              ({selectedProblem.topic})
-            </p>
-
-            <form onSubmit={handleLogSubmit} className="space-y-5">
-
-              {/* Solve Outcome */}
-              <div>
-                <label
-                  className="
-                    block
-                    text-xs
-                    font-bold
-                    uppercase
-                    tracking-wider
-                    text-gray-600
-                    dark:text-gray-400
-                    mb-2
-                  "
-                >
-                  Solve Outcome
-                </label>
-
-                <div className="grid grid-cols-2 gap-3">
-
-                  <button
-                    type="button"
-                    onClick={() => setStatus('Solved')}
-                    className={`
-                      py-2.5
-                      rounded-xl
-                      border
-                      text-sm
-                      font-bold
-                      transition-all
-                      cursor-pointer
-                      ${
-                        status === 'Solved'
-                          ? 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400'
-                          : 'border-gray-300 dark:border-darkBorder bg-gray-50 dark:bg-darkBg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }
-                    `}
-                  >
-                    Solved Successfully
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setStatus('Failed')}
-                    className={`
-                      py-2.5
-                      rounded-xl
-                      border
-                      text-sm
-                      font-bold
-                      transition-all
-                      cursor-pointer
-                      ${
-                        status === 'Failed'
-                          ? 'bg-red-500/10 border-red-500 text-red-600 dark:text-red-400'
-                          : 'border-gray-300 dark:border-darkBorder bg-gray-50 dark:bg-darkBg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }
-                    `}
-                  >
-                    Incorrect/Gave Up
-                  </button>
-
-                </div>
-              </div>
-
-              {/* Attempts + Time */}
-              <div className="grid grid-cols-2 gap-4">
-
-                <div>
-                  <label
-                    className="
-                      block
-                      text-xs
-                      font-bold
-                      uppercase
-                      tracking-wider
-                      text-gray-600
-                      dark:text-gray-400
-                      mb-2
-                    "
-                  >
-                    Attempts Count
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    required
-                    value={attempts}
-                    onChange={(e) => setAttempts(e.target.value)}
-                    className="
-                      w-full
-                      bg-white
-                      dark:bg-darkBg
-                      border
-                      border-gray-300
-                      dark:border-darkBorder/60
-                      rounded-xl
-                      py-2
-                      px-3
-                      text-gray-900
-                      dark:text-white
-                      focus:outline-none
-                      focus:border-purple-500
-                      transition-all
-                      text-sm
-                    "
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="
-                      block
-                      text-xs
-                      font-bold
-                      uppercase
-                      tracking-wider
-                      text-gray-600
-                      dark:text-gray-400
-                      mb-2
-                    "
-                  >
-                    Time Spent (Mins)
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    max="180"
-                    required
-                    value={timeTaken}
-                    onChange={(e) => setTimeTaken(e.target.value)}
-                    className="
-                      w-full
-                      bg-white
-                      dark:bg-darkBg
-                      border
-                      border-gray-300
-                      dark:border-darkBorder/60
-                      rounded-xl
-                      py-2
-                      px-3
-                      text-gray-900
-                      dark:text-white
-                      focus:outline-none
-                      focus:border-purple-500
-                      transition-all
-                      text-sm
-                    "
-                  />
-                </div>
-
-              </div>
-
-              {/* Hints */}
-              <div>
-                <label
-                  className="
-                    block
-                    text-xs
-                    font-bold
-                    uppercase
-                    tracking-wider
-                    text-gray-600
-                    dark:text-gray-400
-                    mb-2
-                  "
-                >
-                  Hints Used (0-3)
-                </label>
-
-                <div className="grid grid-cols-4 gap-2">
-
-                  {[0, 1, 2, 3].map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setHintsUsed(h)}
-                      className={`
-                        py-2
-                        rounded-lg
-                        border
-                        text-xs
-                        font-bold
-                        transition-all
-                        cursor-pointer
-                        ${
-                          hintsUsed === h
-                            ? 'bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-gray-300 dark:border-darkBorder bg-gray-50 dark:bg-darkBg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                        }
-                      `}
-                    >
-                      {h}
-                    </button>
-                  ))}
-
-                </div>
-              </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="
-                  w-full
-                  bg-gradient-to-r
-                  from-blue-600
-                  to-purple-600
-                  hover:from-blue-500
-                  hover:to-purple-500
-                  text-white
-                  font-bold
-                  py-3.5
-                  rounded-xl
-                  transition-all
-                  shadow-lg
-                  active:scale-95
-                  disabled:opacity-50
-                  text-sm
-                  mt-3
-                  cursor-pointer
-                "
-              >
-                {submitting
-                  ? 'Updating Skill Topology...'
-                  : 'Submit Attempt Logs'}
-              </button>
-
-            </form>
+            />
           </div>
+
+          {/* Difficulty */}
+          <div className="relative">
+
+            <Filter
+              size={16}
+              className="
+                absolute left-3 top-1/2
+                -translate-y-1/2
+                text-gray-400
+              "
+            />
+
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              className="
+                w-full
+                appearance-none
+                bg-gray-50 dark:bg-darkBg
+                border border-gray-200 dark:border-darkBorder/50
+                rounded-xl
+                py-2.5 pl-10 pr-4
+                text-sm
+                text-gray-900 dark:text-white
+                focus:outline-none
+                focus:border-purple-500
+                transition-all
+              "
+            >
+              <option value="All">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+
+          {/* Topic */}
+          <div>
+            <select
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className="
+                w-full
+                bg-gray-50 dark:bg-darkBg
+                border border-gray-200 dark:border-darkBorder/50
+                rounded-xl
+                py-2.5 px-4
+                text-sm
+                text-gray-900 dark:text-white
+                focus:outline-none
+                focus:border-purple-500
+                transition-all
+              "
+            >
+              <option value="All">All Topics</option>
+
+              {topics.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Count */}
+      <div className="flex items-center justify-between">
+
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Showing{" "}
+          <span className="font-bold text-gray-900 dark:text-white">
+            {filteredProblems.length}
+          </span>{" "}
+          of{" "}
+          <span className="font-bold text-gray-900 dark:text-white">
+            {problems.length}
+          </span>{" "}
+          problems
+        </p>
+
+      </div>
+
+      {/* Problems */}
+      {filteredProblems.length === 0 ? (
+        <div className="glass-panel rounded-2xl p-12 text-center">
+
+          <Search
+            size={35}
+            className="mx-auto text-gray-400 mb-3"
+          />
+
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            No problems found
+          </h3>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Try changing your search or filters.
+          </p>
+
+        </div>
+      ) : (
+        <div className="glass-panel rounded-2xl overflow-hidden">
+
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+
+            <table className="w-full">
+
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-darkBorder/40">
+
+                  <th className="text-left px-6 py-4 text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    #
+                  </th>
+
+                  <th className="text-left px-6 py-4 text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    Problem
+                  </th>
+
+                  <th className="text-left px-6 py-4 text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    Difficulty
+                  </th>
+
+                  <th className="text-left px-6 py-4 text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    Topic
+                  </th>
+
+                  <th className="text-left px-6 py-4 text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    Acceptance
+                  </th>
+
+                  <th className="text-right px-6 py-4 text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    Link
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {filteredProblems.map((problem) => (
+
+                  <tr
+                    key={problem.problem_id}
+                    className="
+                      border-b border-gray-100 dark:border-darkBorder/20
+                      hover:bg-gray-50 dark:hover:bg-darkCard/40
+                      transition-colors
+                    "
+                  >
+
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                        {problem.problem_id}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+
+                      <div className="flex items-center gap-3">
+
+                        <Circle
+                          size={16}
+                          className="text-gray-400 flex-shrink-0"
+                        />
+
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                          {problem.title}
+                        </span>
+
+                      </div>
+
+                    </td>
+
+                    <td className="px-6 py-4">
+
+                      <span
+                        className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                          problem.difficulty === "Easy"
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
+                            : problem.difficulty === "Medium"
+                            ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
+                            : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
+                        }`}
+                      >
+                        {problem.difficulty}
+                      </span>
+
+                    </td>
+
+                    <td className="px-6 py-4">
+
+                      <span className="inline-flex px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold">
+                        {problem.topic}
+                      </span>
+
+                    </td>
+
+                    <td className="px-6 py-4">
+
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {Math.round(
+                          problem.acceptance_rate * 100
+                        )}
+                        %
+                      </span>
+
+                    </td>
+
+                    <td className="px-6 py-4 text-right">
+
+                      <a
+                        href={problem.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="
+                          inline-flex items-center gap-1.5
+                          text-purple-600 dark:text-purple-400
+                          hover:text-purple-500
+                          text-xs font-bold
+                          transition-colors
+                        "
+                      >
+                        Solve
+                        <ExternalLink size={13} />
+                      </a>
+
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-gray-200 dark:divide-darkBorder/30">
+
+            {filteredProblems.map((problem) => (
+
+              <div
+                key={problem.problem_id}
+                className="p-5 hover:bg-gray-50 dark:hover:bg-darkCard/30 transition-colors"
+              >
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <div className="flex-1">
+
+                    <div className="flex items-center gap-2 mb-2">
+
+                      <span className="text-xs font-bold text-gray-400">
+                        #{problem.problem_id}
+                      </span>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${
+                          problem.difficulty === "Easy"
+                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                            : problem.difficulty === "Medium"
+                            ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                            : "bg-red-500/10 text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {problem.difficulty}
+                      </span>
+
+                    </div>
+
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                      {problem.title}
+                    </h3>
+
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
+
+                      <span className="px-2 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9px] font-bold">
+                        {problem.topic}
+                      </span>
+
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                        Acceptance:{" "}
+                        {Math.round(
+                          problem.acceptance_rate * 100
+                        )}
+                        %
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                  <a
+                    href={problem.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="
+                      p-2 rounded-lg
+                      bg-purple-500/10
+                      text-purple-600 dark:text-purple-400
+                      hover:bg-purple-500/20
+                      transition-all
+                    "
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+
+                </div>
+
+              </div>
+
+            ))}
+
+          </div>
+
         </div>
       )}
 
@@ -772,4 +477,3 @@ function Problems() {
   );
 }
 
-export default Problems;

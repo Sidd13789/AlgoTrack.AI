@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+
 import {
   ResponsiveContainer,
   RadarChart,
@@ -8,6 +9,7 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
+
 import {
   Brain,
   Clock,
@@ -20,49 +22,101 @@ import {
   X,
   Play,
 } from "lucide-react";
+
 function Dashboard({ fetchStreak }) {
   const [profile, setProfile] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [recoLoading, setRecoLoading] = useState(false);
+
   // Submit modal states
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [status, setStatus] = useState("Solved");
   const [attempts, setAttempts] = useState(1);
   const [timeTaken, setTimeTaken] = useState(20);
   const [hintsUsed, setHintsUsed] = useState(0);
+
   // Accordion details for XAI
   const [expandedReco, setExpandedReco] = useState(null);
+
+  // Production API on Vercel, local API on localhost
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  // JWT configuration
+  const getAuthConfig = () => {
+    const token = localStorage.getItem("token");
+
+    return {
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {},
+    };
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
   const fetchDashboardData = async () => {
     setLoading(true);
+
     try {
-      const profileRes = await axios.get("/api/user/profile");
+      // Get user profile
+      const profileRes = await axios.get(
+        `${API_URL}/user/profile`,
+        getAuthConfig()
+      );
+
       setProfile(profileRes.data);
+
+      // Get AI recommendations / LeetCode problems
       setRecoLoading(true);
-      const recsRes = await axios.get("/api/recommendations");
+
+      const recsRes = await axios.get(
+        `${API_URL}/recommendations`,
+        getAuthConfig()
+      );
+
+      console.log("Recommendations response:", recsRes.data);
+
       setRecommendations(recsRes.data.recommendations || []);
     } catch (err) {
-      console.error("Failed to load dashboard", err);
+      console.error(
+        "Failed to load dashboard:",
+        err.response?.data || err.message
+      );
     } finally {
       setLoading(false);
       setRecoLoading(false);
     }
   };
+
   const handleRefreshRecommendations = async () => {
     setRecoLoading(true);
+
     try {
-      const recsRes = await axios.get("/api/recommendations");
+      const recsRes = await axios.get(
+        `${API_URL}/recommendations`,
+        getAuthConfig()
+      );
+
+      console.log("Refresh recommendations response:", recsRes.data);
+
       setRecommendations(recsRes.data.recommendations || []);
     } catch (err) {
-      console.error("Failed to refresh recommendations", err);
+      console.error(
+        "Failed to refresh recommendations:",
+        err.response?.data || err.message
+      );
     } finally {
       setRecoLoading(false);
     }
   };
+
   const handleOpenLogModal = (problem) => {
     setSelectedProblem(problem);
     setStatus("Solved");
@@ -70,39 +124,58 @@ function Dashboard({ fetchStreak }) {
     setTimeTaken(20);
     setHintsUsed(0);
   };
+
   const handleLogSubmit = async (e) => {
     e.preventDefault();
+
     setSubmitting(true);
+
     try {
-      await axios.post("/api/submissions", {
-        problem_id: selectedProblem.problem_id,
-        status,
-        attempts: parseInt(attempts),
-        time_taken: parseInt(timeTaken),
-        hints_used: parseInt(hintsUsed),
-      });
+      await axios.post(
+        `${API_URL}/submissions`,
+        {
+          problem_id: selectedProblem.problem_id,
+          status,
+          attempts: parseInt(attempts),
+          time_taken: parseInt(timeTaken),
+          hints_used: parseInt(hintsUsed),
+        },
+        getAuthConfig()
+      );
+
       setSelectedProblem(null);
-      fetchStreak();
+
+      if (fetchStreak) {
+        fetchStreak();
+      }
+
       await fetchDashboardData();
     } catch (err) {
-      console.error("Failed to log submission", err);
+      console.error(
+        "Failed to log submission:",
+        err.response?.data || err.message
+      );
+
       alert("Error logging submission. Please verify details.");
     } finally {
       setSubmitting(false);
     }
   };
+
   if (loading && !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <div className="animate-spin text-purple-500">
           <RefreshCw size={36} />
         </div>
+
         <p className="text-gray-600 dark:text-gray-400 text-sm font-semibold">
           Running ML inferences and loading metrics...
         </p>
       </div>
     );
   }
+
   // Format skills data for Recharts Radar
   const radarData = Object.entries(profile?.skills || {}).map(
     ([topic, val]) => ({
@@ -111,14 +184,18 @@ function Dashboard({ fetchStreak }) {
       fullMark: 100,
     })
   );
+
   // Group topics into milestones
   const getMilestoneScore = (topics) => {
     if (!profile?.skills) return 0;
+
     const scores = topics.map((t) => profile.skills[t] || 0);
+
     return Math.round(
       (scores.reduce((a, b) => a + b, 0) / topics.length) * 100
     );
   };
+
   const milestones = [
     {
       name: "Milestone 1: Basic Operations",
@@ -141,14 +218,17 @@ function Dashboard({ fetchStreak }) {
       score: getMilestoneScore(["Graphs", "Dynamic Programming"]),
     },
   ];
+
   return (
     <div className="space-y-8 animate-fade-in">
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
             Hi, <span className="gradient-text">{profile?.user?.username}</span>!
           </h2>
+
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
             Targeting{" "}
             <span className="text-purple-600 dark:text-purple-400 font-semibold">
@@ -157,6 +237,7 @@ function Dashboard({ fetchStreak }) {
             . AI has analyzed your solve history.
           </p>
         </div>
+
         <button
           onClick={handleRefreshRecommendations}
           disabled={recoLoading}
@@ -180,8 +261,10 @@ function Dashboard({ fetchStreak }) {
           <span>Refresh AI Plans</span>
         </button>
       </div>
+
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
         <div className="glass-panel p-5 rounded-2xl flex items-center gap-4">
           <div className="bg-purple-500/10 p-3 rounded-xl text-purple-600 dark:text-purple-400">
             <CheckCircle2 size={24} />
@@ -245,9 +328,7 @@ function Dashboard({ fetchStreak }) {
                 (Object.values(profile?.skills || {}).reduce(
                   (a, b) => a + b,
                   0
-                ) /
-                  8) *
-                  100
+                ) / 8) * 100
               )}
               %
             </p>
@@ -403,6 +484,7 @@ function Dashboard({ fetchStreak }) {
             </div>
           </div>
         </div>
+
         {/* RIGHT */}
         <div className="lg:col-span-5 space-y-6">
 
@@ -446,8 +528,10 @@ function Dashboard({ fetchStreak }) {
               </div>
             ) : (
               <div className="space-y-4">
+
                 {recommendations.map((reco) => {
-                  const isExpanded = expandedReco === reco.problem_id;
+                  const isExpanded =
+                    expandedReco === reco.problem_id;
 
                   return (
                     <div
@@ -529,7 +613,9 @@ function Dashboard({ fetchStreak }) {
                           <button
                             onClick={() =>
                               setExpandedReco(
-                                isExpanded ? null : reco.problem_id
+                                isExpanded
+                                  ? null
+                                  : reco.problem_id
                               )
                             }
                             className="
@@ -559,14 +645,16 @@ function Dashboard({ fetchStreak }) {
                           </p>
 
                           <ul className="space-y-1.5 list-disc pl-4">
-                            {reco.explanations.map((reason, rIdx) => (
-                              <li
-                                key={rIdx}
-                                className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-medium"
-                              >
-                                {reason}
-                              </li>
-                            ))}
+                            {(reco.explanations || []).map(
+                              (reason, rIdx) => (
+                                <li
+                                  key={rIdx}
+                                  className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-medium"
+                                >
+                                  {reason}
+                                </li>
+                              )
+                            )}
                           </ul>
                         </div>
                       )}
@@ -578,6 +666,7 @@ function Dashboard({ fetchStreak }) {
           </div>
         </div>
       </div>
+
       {/* Modal */}
       {selectedProblem && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -705,6 +794,7 @@ function Dashboard({ fetchStreak }) {
                 </label>
 
                 <div className="grid grid-cols-4 gap-2">
+
                   {[0, 1, 2, 3].map((h) => (
                     <button
                       key={h}
@@ -721,6 +811,7 @@ function Dashboard({ fetchStreak }) {
                   ))}
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -747,4 +838,5 @@ function Dashboard({ fetchStreak }) {
     </div>
   );
 }
+
 export default Dashboard;

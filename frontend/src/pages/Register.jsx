@@ -1,14 +1,20 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+
 import {
   User,
   Mail,
   Lock,
   Briefcase,
   GraduationCap,
-  Brain
+  Brain,
+  Sun,
+  Moon
 } from 'lucide-react';
+
+import { useTheme } from '../context/ThemeContext';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -16,24 +22,33 @@ function Register() {
   const [password, setPassword] = useState('');
   const [skillLevel, setSkillLevel] = useState('Beginner');
   const [targetRole, setTargetRole] = useState('General FAANG Prep');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
+
+  // Production API from Vercel environment variable
+  // Local fallback for development
+  const API_URL =
+    import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError('');
     setLoading(true);
 
     try {
-      await axios.post('/api/auth/register', {
+      await axios.post(`${API_URL}/auth/register`, {
         username,
         email,
         password,
         skillLevel,
         targetRole
       });
+
       // Registration successful
       // Do NOT automatically login
       // Go to Login page
@@ -41,7 +56,7 @@ function Register() {
     } catch (err) {
       setError(
         err.response?.data?.error ||
-        'Registration failed. Try another username/email.'
+          'Registration failed. Try another username/email.'
       );
     } finally {
       setLoading(false);
@@ -49,7 +64,41 @@ function Register() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center min-h-[80vh] py-8">
+    <div className="flex-1 flex items-center justify-center min-h-[80vh] py-8 relative">
+
+      {/* Theme Toggle */}
+      <button
+        onClick={toggleTheme}
+        className="
+          absolute
+          top-4
+          right-4
+          p-2.5
+          rounded-xl
+          border
+          border-gray-300
+          dark:border-gray-700
+          bg-gray-100
+          dark:bg-gray-800
+          text-gray-700
+          dark:text-gray-200
+          hover:bg-gray-200
+          dark:hover:bg-gray-700
+          transition-all
+          cursor-pointer
+        "
+        title={
+          theme === 'dark'
+            ? 'Switch to Light Mode'
+            : 'Switch to Dark Mode'
+        }
+      >
+        {theme === 'dark' ? (
+          <Sun size={18} />
+        ) : (
+          <Moon size={18} />
+        )}
+      </button>
 
       <div
         className="
@@ -69,7 +118,6 @@ function Register() {
         "
       >
 
-        {/* Top Gradient */}
         <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500"></div>
 
         {/* Header */}
@@ -152,6 +200,7 @@ function Register() {
               </label>
 
               <div className="relative">
+
                 <span
                   className="
                     absolute
@@ -161,7 +210,6 @@ function Register() {
                     items-center
                     pl-3.5
                     text-gray-500
-                    dark:text-gray-500
                   "
                 >
                   <User size={16} />
@@ -217,6 +265,7 @@ function Register() {
               </label>
 
               <div className="relative">
+
                 <span
                   className="
                     absolute
@@ -226,7 +275,6 @@ function Register() {
                     items-center
                     pl-3.5
                     text-gray-500
-                    dark:text-gray-500
                   "
                 >
                   <Mail size={16} />
@@ -283,6 +331,7 @@ function Register() {
             </label>
 
             <div className="relative">
+
               <span
                 className="
                   absolute
@@ -292,7 +341,6 @@ function Register() {
                   items-center
                   pl-3.5
                   text-gray-500
-                  dark:text-gray-500
                 "
               >
                 <Lock size={16} />
@@ -351,6 +399,7 @@ function Register() {
               </label>
 
               <div className="relative">
+
                 <span
                   className="
                     absolute
@@ -360,7 +409,6 @@ function Register() {
                     items-center
                     pl-3.5
                     text-gray-500
-                    dark:text-gray-500
                   "
                 >
                   <GraduationCap size={16} />
@@ -423,6 +471,7 @@ function Register() {
               </label>
 
               <div className="relative">
+
                 <span
                   className="
                     absolute
@@ -432,7 +481,6 @@ function Register() {
                     items-center
                     pl-3.5
                     text-gray-500
-                    dark:text-gray-500
                   "
                 >
                   <Briefcase size={16} />
@@ -519,6 +567,7 @@ function Register() {
 
         {/* Login Link */}
         <div className="mt-6 text-center text-sm">
+
           <p className="text-gray-500 dark:text-gray-400">
             Already have an account?{' '}
 
@@ -537,11 +586,12 @@ function Register() {
               Sign In
             </Link>
           </p>
-        </div>
 
+        </div>
       </div>
     </div>
   );
 }
 
 export default Register;
+
