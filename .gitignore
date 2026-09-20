@@ -28,3 +28,5 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+# Ignore accidental nested project folder
+Ai powered/
